@@ -15,23 +15,25 @@ class TestSheetFunctions(unittest.TestCase):
 
     def test_to_array(self):
         # test that array is not empty or null
-        self.assertTrue(self.lamb_sheet.image_array != None)
-        self.assertTrue(self.lamb_sheet.image_array.size > 0)
+        image_array = self.lamb_sheet.get_image_array()
+        self.assertTrue(image_array != None)
+        self.assertTrue(image_array.size > 0)
 
     def test_dimensions(self):
         # test that the correct midpoint of width is found
-        self.assertTrue((self.lamb_sheet.width == self.REAL_WIDTH),
-            ("Width Found: " + str(self.lamb_sheet.width) + 
-            ", expected: " + str(self.REAL_WIDTH)))
-        self.assertTrue((self.lamb_sheet.height == self.REAL_HEIGHT),
-            ("Height Found: " + str(self.lamb_sheet.height) + 
-            ", expected: " + str(self.REAL_HEIGHT)))
-        self.assertTrue((self.lamb_sheet.midpoint == self.REAL_MIDPOINT),
-            ("Midpoint Found: " + str(self.lamb_sheet.midpoint) + 
-            ", expected: " + str(self.REAL_MIDPOINT)))
+        width = self.lamb_sheet.get_width()
+        height = self.lamb_sheet.get_height()
+        midpoint = self.lamb_sheet.get_midpoint()
 
-    def test_beginning_whitespace(self):
-        self.lamb_sheet.find_beginning_whitespace()
+        self.assertTrue((width == self.REAL_WIDTH),
+            ("Width Found: " + str(width) + 
+            ", expected: " + str(self.REAL_WIDTH)))
+        self.assertTrue((height == self.REAL_HEIGHT),
+            ("Height Found: " + str(height) + 
+            ", expected: " + str(self.REAL_HEIGHT)))
+        self.assertTrue((midpoint == self.REAL_MIDPOINT),
+            ("Midpoint Found: " + str(midpoint) + 
+            ", expected: " + str(self.REAL_MIDPOINT)))
 
 if __name__ == '__main__':
     unittest.main()

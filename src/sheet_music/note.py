@@ -1,47 +1,31 @@
-# To change this license header, choose License Headers in Project Properties.
-# To change this template file, choose Tools | Templates
-# and open the template in the editor.
-
 class Note:
-    global value
-    value = 'c'
-    
-    global octave
-    octave = 4
-    
-    global duration
-    duration = .25
-    
-    global dotted
-    dotted = 1
+    def __init__(self, value, octave, duration, dotted):
+        self.value = value
+        self.octave = octave
+        self.duration = duration
+        self.dotted = dotted
     
     def to_string(self):
-        print "Note value is: " + value + str(octave)
-        
-        toPrint = "Duration is: "
-        
-        if(duration == 1):
-            toPrint += "whole"
-        elif(duration == .5):
-            toPrint += "half"
-        elif(duration == .25):
-            toPrint += "quarter"
-        elif(duration == .125):
-            toPrint += "eighth"
-        elif(duration == .0625):
-            toPrint += "sixteenth"
-        elif(duration == .03125):
-            toPrint += "thirty-second"
-        else:
-            toPrint += "undefined"
-            
-        if(dotted == 1):
-            toPrint += " dotted"            
-            
-        print toPrint
-        
+        output = "Note value is: " + self.value + " [" + self.octave
+        output += "] of duration: "
 
-n = Note()
-n.to_string()
+        if self.dotted:
+            output += "dotted "
 
+        duration_string = {
+            1: 'whole',
+            .5: 'half',
+            .25: 'quarter',
+            .125: 'eighth',
+            .0625: 'sixteenth',
+            .03125: 'thirty-second',
+        }[self.duration]
 
+        output += "undefined" if duration_string == None else duration_string
+        output += "."
+
+        return output
+
+if __name__=="__main__":
+    n = Note("C4", "A8", 1, True)
+    print(n.to_string())

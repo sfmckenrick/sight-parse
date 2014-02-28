@@ -8,37 +8,122 @@ class SheetImage:
         self.image = Image.open(source_image_path)
         self.image_array = np.asarray(self.image)
 
-    def get_width(self):
-        # returns the width of the sheet music image
-        return self.get_dimensions()[0]
-    
-    def get_height(self):
-        # returns height of sheet music image
-        return self.get_dimensions()[1]
+    # static methods used for image analysis on both the main image
+    # as well as its constituents
+    @staticmethod
+    def get_width(image):
+        # returns the width of the provided image
+        return SheetImage.get_dimensions(image)[0]
 
-    def get_midpoint(self):
-        # returns x-midpoint of sheet music image
-        return int(math.ceil(self.get_width()/2))
+    @staticmethod
+    def get_height(image):
+        # returns the width of the provided image
+        return SheetImage.get_dimensions(image)[1]
 
-    def get_dimensions(self):
-        # returns tuple of (width, height) of the test sheet music
-        image_array_shape = self.image_array.shape
-        return(image_array_shape[1], image_array_shape[0])
+    @staticmethod
+    def get_midpoint(image):
+        # returns x-midpoint of the provided image
+        return int(math.ceil(SheetImage.get_width(image)/2))
+
+    @staticmethod
+    def get_dimensions(image):
+        # returns tuple of (width, height) of the provided image
+        image_array_shape = np.asarray(image).shape
+        return image_array_shape[1], image_array_shape[0]
+
+    @staticmethod
+    def pixel_is_black(image, x, y, threshold=20):
+        # returns true if the given pixel is "within threshold values" to black
+        pixel_value = SheetImage.get_pixel_value(image, x, y)
+        return pixel_value < threshold
+
+    @staticmethod
+    def get_pixel_value(image, x, y):
+        return np.asarray(image)[y][x]
+
+    @staticmethod
+    def get_row(image, row_number):
+        return np.asarray(image)[row_number]
+
+    @staticmethod
+    def get_column(image, row_number):
+        column = []
+        image_height = SheetImage.get_height(image)
+
+        for y in range(image_height):
+            column.append(np.asarray(image)[y][row_number])
+
+        return column
 
     def get_notes(self):
         # returns a list of note images from sheet music image
+        print("Attempting to parse notes.")
+
         staff_images = self.__get_staff_images()
         notes = []
-        for image_array in [np.asarray(image) for image in staff_images]:
-            width = image.shape[0]
-            height = image.shape[1]
+
+        for staff in staff_images:
+            print("Analyzing a staff.")
+            width = SheetImage.get_width(staff)
+            height = SheetImage.get_height(staff)
+
+            # get the number of black pixels for a staff with no notes
+            # to get this, we'll scan the staff and take the least amount of black pixels found
+            least_found = None
+
             for x in range(0, width):
-                pass
+                number_found = 0
+                for y in range(0, height):
+                    if SheetImage.pixel_is_black(staff, x, y):
+                        number_found += 1
+                if number_found < least_found or least_found is None:
+                    least_found = number_found
+
+            empty_staff_black_pixel_count = least_found
+            # now that we have the amount of black pixels expected in a column where there is no
+            # note, we can begin to slice out the actual notes
+
+            scanning_note = False
+            note_begin = None
+            note_end = None
+
+            for x in range(0, width):
+                number_found = 0
+                for y in range(0, height):
+                    if SheetImage.pixel_is_black(staff, x, y):
+                        number_found += 1
+                if empty_staff_black_pixel_count == number_found: # we're still looking for a note
+                    if scanning_note:
+                        # we found the end of the note
+                        note_end = x-1
+                        scanning_note = False
+                        # as a rough way to check that it is, in fact, a note, check that it's width > 3px
+                        if (note_end - note_begin > 3):
+                            # add some image padding
+                            note_begin -= 2
+                            note_end += 2
+                            note = staff.crop((note_begin, 0, note_end, height-1))
+                            notes.append(note)
+                            print("Found a note.")
+                        else:
+                            pass # we're probably looking at a divider
+                    else:
+                        # just keep looking
+                        pass
+                else:
+                    if scanning_note:
+                        # we already know we're looking at a note, find the end
+                        pass
+                    else:
+                        # found the end of the note
+                        scanning_note = True
+                        note_begin = x
+
+        return notes
 
     def __get_staff_images(self):
         # returns images of the staffs
-        staff_positions = s.get_staffs_positions()
-        print staff_positions
+        staff_positions = self.__get_staffs_positions()
         staff_images = []
 
         for i, p in enumerate(staff_positions):
@@ -46,10 +131,10 @@ class SheetImage:
             y1 = p[1]
             x2 = p[0]+p[2]
             y2 = p[1]+p[3]
-            s.image.crop((x1, y1, x2, y2))
-            staff_images.append(s)
+            image = self.image.crop((x1, y1, x2, y2))
+            staff_images.append(image)
 
-        return staff_iamges
+        return staff_images
 
     def __get_staffs_positions(self):
         # returns 4-tuples of staff dimensions
@@ -61,23 +146,23 @@ class SheetImage:
 
         first_staffs_ys = range(first_staff[0], first_staff[1])
         staff_x_beginning = 0
-        staff_x_end = self.get_width()
+        staff_x_end = SheetImage.get_width(self.image)
 
         # starting from the middle of the page, go left until black pixels aren't found
-        for x in reversed(range(0, self.get_midpoint())):
+        for x in reversed(range(0, SheetImage.get_midpoint(self.image))):
             found_black = False
             for y in first_staffs_ys:
-                current_pixel = self.__pixel_is_black(x, y)
+                current_pixel = SheetImage.pixel_is_black(self.image, x, y, 20)
                 found_black = found_black or current_pixel
             if not found_black:
                 staff_x_beginning = x+3
                 break
 
         # starting from the middle of the page, go right until black pixels aren't found
-        for x in range(self.get_midpoint(), self.get_width()):
+        for x in range(SheetImage.get_midpoint(self.image), SheetImage.get_width(self.image)):
             found_black = False
             for y in first_staffs_ys:
-                current_pixel = self.__pixel_is_black(x, y)
+                current_pixel = SheetImage.pixel_is_black(self.image, x, y, 20)
                 found_black = found_black or current_pixel
             if not found_black:
                 staff_x_end = x-2
@@ -103,7 +188,7 @@ class SheetImage:
             padding = int(height / 2)
 
             width = staff_position[2]
-            height = height + padding * 2
+            height += padding * 2
             x = staff_position[0]
             y = staff_position[1] - padding
             final_staff_positions.append((x, y, width, height))
@@ -126,18 +211,18 @@ class SheetImage:
     def __get_first_staff_ys(self, vertical_offset):
         # returns a tuple of the beginning and end y positions of the first staff
         # found below the provided vertical_offset
-        midpoint = self.get_midpoint()
-        image_height = self.get_height()
+        midpoint = SheetImage.get_midpoint(self.image)
+        image_height = SheetImage.get_height(self.image)
         staff_spacing_variance = 5
 
         for y_root in range(vertical_offset+1, image_height-25):
-            current_pixel_is_black = self.__pixel_is_black(midpoint, y_root)
+            current_pixel_is_black = SheetImage.pixel_is_black(self.image, midpoint, y_root, 20)
 
             if not current_pixel_is_black:
                 continue # haven't found the first ledger line yet
             
             # now we've possibly found the first ledger line
-            next_pixel_is_black = self.__pixel_is_black(midpoint, y_root+1)
+            next_pixel_is_black = SheetImage.pixel_is_black(self.image, midpoint, y_root+1, 20)
 
             if next_pixel_is_black:
                 continue # we're assuming for now all lines are 1px thick
@@ -147,7 +232,7 @@ class SheetImage:
             ledger_spacing = 0
 
             for y_spacing in range(y_root+1, image_height):
-                spacing_pixel_is_black = self.__pixel_is_black(midpoint+1, y_spacing)
+                spacing_pixel_is_black = SheetImage.pixel_is_black(self.image, midpoint+1, y_spacing, 20)
 
                 if (spacing_pixel_is_black):
                     break # we found another ledger line
@@ -160,7 +245,7 @@ class SheetImage:
             num_non_black = 0
 
             # make sure it's possible to fit a staff below
-            if (y_root + ledger_spacing * 4) > self.get_height():
+            if (y_root + ledger_spacing * 4) > SheetImage.get_height(self.image):
                 continue # continue
 
             # now we check if we're probably looking at a ledger line
@@ -170,7 +255,7 @@ class SheetImage:
             num_pixels = ledger_spacing*(5)+staff_spacing_variance
 
             for y_ledger in range(num_pixels):
-                pixel_value_is_black = self.__pixel_is_black(midpoint, y_root+y_ledger)
+                pixel_value_is_black = SheetImage.pixel_is_black(self.image, midpoint, y_root+y_ledger, 20)
                 num_black += pixel_value_is_black
 
             if (num_black != 5):
@@ -181,28 +266,8 @@ class SheetImage:
 
         return None # we couldn't find any staff
 
-    def __pixel_is_black(self, x, y):
-        # returns true if the given pixel is "close enough" to black
-        pixel_value = self.__get_pixel_value(x, y)
-        threshold = 20 # less than threshold is black
-        return (pixel_value < threshold)
-
-    def __get_pixel_value(self, x, y):
-        return self.image_array[y][x]
-
-    def __get_row(self, row_number):
-        return self.image_array()[row_number]
-
-    def __get_column(self, row_number):
-        column = []
-        image_height = self.get_height()
-
-        for y in range(image_height-25):
-            current_pixel_value = self.image_array[y][row_number]
-            current_pixel_is_black = self.__pixel_is_black(current_pixel_value)
-            column.append(current_pixel_is_black)
-
-        return column
-
 if __name__=="__main__":
     s = SheetImage("../../bin/mary-had-a-little-lamb.gif")
+    notes = s.get_notes()
+    for i, note in enumerate(notes):
+        note.save(str(i)+".gif")

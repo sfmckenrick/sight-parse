@@ -27,5 +27,5 @@ class Note:
         return output
 
 if __name__=="__main__":
-    n = Note("C4", "A8", 1, True)
+    n = Note("C", "4", 1, True)
     print(n.to_string())

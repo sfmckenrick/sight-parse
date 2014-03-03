@@ -1,10 +1,6 @@
 from note import Note
 
 class Sheet:
-    notes = []
-    measure_number = 1
-    beat_count = 0
-
     def __init__(self, title, composer, beats, beat_type, clef, clef_line):
         self.title     = title
         self.composer  = composer
@@ -12,12 +8,16 @@ class Sheet:
         self.beat_type = beat_type
         self.clef      = clef
         self.clef_line = clef_line
+        self.notes = []
     
     #adds a note to the note list
     def add_note(self, note_object):
         self.notes.append(note_object)
         
     def export_xml(self):
+        measure_number = 1
+        beat_count     = 0
+
         #opening the file for writing
         xml_file = open("file.xml", 'w')
         
@@ -50,15 +50,15 @@ class Sheet:
         xml_file.write("<part id=\"P1\">\n")
         
         #looping through the notes
-        for i, note in enumerate(Sheet.notes):            
+        for i, note in enumerate(self.notes):
             #writing the measure number if there are no beats in the measure
-            if (Sheet.beat_count == 0):
+            if beat_count == 0:
                 xml_file.write("<measure number=\"")
-                xml_file.write(str(Sheet.measure_number))
+                xml_file.write(str(measure_number))
                 xml_file.write("\">\n")
                 
                 #adding the timing, clef, and staff lines in the first measure.
-                if (Sheet.measure_number == 1):
+                if measure_number == 1:
                     xml_file.write("<attributes>\n")
                     xml_file.write("<divisions>1</divisions>\n")
                     xml_file.write("<key>\n")
@@ -110,31 +110,31 @@ class Sheet:
             xml_file.write("<note>\n")
             xml_file.write("<pitch>\n")
             xml_file.write("<step>")
-            xml_file.write(Sheet.notes[i].value)
+            xml_file.write(self.notes[i].value)
             xml_file.write("</step>\n")
             xml_file.write("<octave>")
-            xml_file.write(Sheet.notes[i].octave)
+            xml_file.write(self.notes[i].octave)
             xml_file.write("</octave>\n")
             xml_file.write("</pitch>\n")
             xml_file.write("<duration>")
-            xml_file.write(str(Sheet.notes[i].duration))
+            xml_file.write(str(self.notes[i].duration))
             xml_file.write("</duration>\n")
             xml_file.write("<type>")
-            xml_file.write(Sheet.notes[i].duration_string)
+            xml_file.write(self.notes[i].duration_string)
             xml_file.write("</type>\n")
             xml_file.write("</note>\n")
                 
             #checking to see if new measure
-            Sheet.beat_count = Sheet.beat_count + note.duration
-            if (Sheet.beat_count >= measure_beats):
+            beat_count = beat_count + note.duration
+            if (beat_count >= measure_beats):
                 xml_file.write("</measure>\n")
-                #incrasing the measure number
-                Sheet.measure_number = Sheet.measure_number + 1 
+                #increment the measure number
+                measure_number += 1
                 #since there is a new measure, reset beat count to 0
-                Sheet.beat_count = 0 
+                beat_count = 0
             
             #if end of notes end the measure
-            elif (i == len(Sheet.notes) - 1):
+            elif i == len(self.notes) - 1:
                 xml_file.write("</measure>\n")
 
         #closing the tags       
@@ -145,7 +145,6 @@ class Sheet:
         xml_file.close()       
         
 if __name__ == "__main__":
-    
     sheet = Sheet('Twinkle Twinkle Little Star', 'Anon', '2', '4', 'G', '2')
     
     note= Note("C", "4", .25, False)
